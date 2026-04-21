@@ -1,0 +1,44 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@theme {
+  --color-primary: #4f46e5;
+  --color-primary-container: #818cf8;
+  --color-surface: #f8fafc;
+  --color-surface-dim: #f1f5f9;
+  --color-surface-low: #ffffff;
+  --color-surface-high: #f1f5f9;
+  --color-surface-lowest: #fdfdfd;
+  --color-on-surface: #0f172a;
+  --color-on-surface-variant: #64748b;
+  --color-tertiary: #10b981;
+  --color-error: #ef4444;
+  
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-inter);
+}
+
+:root {
+  background-color: var(--color-surface);
+  color: var(--color-on-surface);
+  color-scheme: light;
+}
+
+body {
+  font-family: var(--font-sans);
+}
+
+/* Custom scrollbar to match the design */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-surface-dim);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-on-surface-variant);
+  border-radius: 10px;
+  opacity: 0.3;
+}
