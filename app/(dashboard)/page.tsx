@@ -39,9 +39,18 @@ const posts = [
 ];
 
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useSearchParams } from 'next/navigation';
+import { cn } from '@/lib/utils';
 
 export default function MonitoringPage() {
   const isMobile = useIsMobile();
+  const searchParams = useSearchParams();
+  const query = searchParams.get('q')?.toLowerCase() || '';
+
+  const filteredPosts = posts.filter(post => 
+    post.author.toLowerCase().includes(query) || 
+    post.handle.toLowerCase().includes(query)
+  );
 
   return (
     <div className={cn("flex h-full overflow-hidden", isMobile && "flex-col overflow-y-auto")}>
@@ -66,9 +75,14 @@ export default function MonitoringPage() {
           </div>
         )}
         <div className="max-w-2xl mx-auto space-y-6 md:space-y-8 pb-12">
-          {posts.map((post, index) => (
+          {filteredPosts.map((post, index) => (
             <PostCard key={index} {...post} />
           ))}
+          {filteredPosts.length === 0 && (
+            <div className="text-center py-12 text-slate-400">
+              Nenhum post encontrado para &quot;{query}&quot;
+            </div>
+          )}
         </div>
       </section>
 
@@ -134,6 +148,3 @@ export default function MonitoringPage() {
     </div>
   );
 }
-
-// Ensure cn is imported
-import { cn } from '@/lib/utils';

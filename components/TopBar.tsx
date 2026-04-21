@@ -3,14 +3,28 @@
 import React from 'react';
 import { Search, Bell, SlidersHorizontal, Share2, User, Plus } from 'lucide-react';
 import { motion } from 'motion/react';
-import { usePathname } from 'next/navigation';
-
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 export default function TopBar() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const isMobile = useIsMobile();
   
+  const [searchValue, setSearchValue] = React.useState(searchParams.get('q') || '');
+
+  const handleSearch = (val: string) => {
+    setSearchValue(val);
+    const params = new URLSearchParams(searchParams.toString());
+    if (val) {
+      params.set('q', val);
+    } else {
+      params.delete('q');
+    }
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
   const getPageTitle = () => {
     switch(pathname) {
       case '/': return 'Monitoramento';
@@ -40,6 +54,8 @@ export default function TopBar() {
             <input 
               type="text" 
               placeholder="Pesquisar arquivo..." 
+              value={searchValue}
+              onChange={(e) => handleSearch(e.target.value)}
               className="bg-slate-50 border border-slate-200 rounded-lg py-2 pl-10 pr-4 w-64 text-sm focus:ring-1 focus:ring-primary transition-all outline-none placeholder:text-slate-400"
             />
           </div>

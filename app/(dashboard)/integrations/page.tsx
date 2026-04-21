@@ -27,6 +27,47 @@ import { useIsMobile } from '@/hooks/use-mobile';
 
 export default function IntegrationsPage() {
   const isMobile = useIsMobile();
+  const [isConnected, setIsConnected] = React.useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('x_connected') === 'true';
+    }
+    return false;
+  });
+  const [isLoading, setIsLoading] = React.useState(false);
+
+  React.useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'OAUTH_AUTH_SUCCESS') {
+        setIsConnected(true);
+        localStorage.setItem('x_connected', 'true');
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
+  const handleConnect = async () => {
+    try {
+      setIsLoading(true);
+      const res = await fetch('/api/auth/x/url');
+      const data = await res.json();
+      
+      if (data.url) {
+        window.open(data.url, 'oauth_popup', 'width=600,height=700');
+      } else {
+        console.error(data.error || "Erro ao obter URL de autenticação");
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRevoke = () => {
+    setIsConnected(false);
+    localStorage.removeItem('x_connected');
+  };
 
   return (
     <div className="h-full overflow-y-auto px-6 md:px-12 py-8 md:py-12 custom-scrollbar pb-32">
@@ -59,19 +100,24 @@ export default function IntegrationsPage() {
                   <div className="text-white font-black text-2xl md:text-3xl opacity-20">X</div>
                 </div>
                 <div>
-                  <h4 className="text-lg md:text-xl font-bold text-slate-800 tracking-tight">Archive_v1_Core</h4>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Status: Ativo</p>
+                  <h4 className="text-lg md:text-xl font-bold text-slate-800 tracking-tight">
+                    {isConnected ? 'Archive_v1_Core' : 'X (Twitter)'}
+                  </h4>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Status: {isConnected ? 'Ativo' : 'Pendente'}</p>
                 </div>
               </div>
-              <div className="px-4 py-1.5 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-600 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2">
-                Conectado
+              <div className={cn(
+                "px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest flex items-center gap-2",
+                isConnected ? "bg-emerald-50 border border-emerald-100 text-emerald-600" : "bg-slate-50 border border-slate-100 text-slate-400"
+              )}>
+                {isConnected ? 'Conectado' : 'Desconectado'}
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
               {[
-                { label: 'Fluxo', value: 'OAuth 2.0 PKCE' },
-                { label: 'Última Sincronização', value: '04:22 GMT Hoje' }
+                { label: 'Fluxo', value: isConnected ? 'OAuth 2.0 PKCE' : 'Aguardando Autenticação' },
+                { label: 'Última Sincronização', value: isConnected ? '04:22 GMT Hoje' : 'N/A' }
               ].map((item) => (
                 <div key={item.label} className="bg-slate-50 p-4 md:p-6 rounded-xl border border-slate-100">
                   <p className="text-[10px] text-slate-400 uppercase font-bold tracking-[0.2em] mb-1 opacity-60">{item.label}</p>
@@ -80,9 +126,22 @@ export default function IntegrationsPage() {
               ))}
             </div>
 
-            <button className="mt-8 md:mt-10 w-full py-4 rounded-xl border border-slate-200 text-slate-400 hover:text-red-500 hover:border-red-100 hover:bg-red-50 transition-all font-bold text-xs uppercase tracking-widest active:scale-98">
-              Revogar Sessão
-            </button>
+            {isConnected ? (
+              <button 
+                onClick={handleRevoke}
+                className="mt-8 md:mt-10 w-full py-4 rounded-xl border border-slate-200 text-slate-400 hover:text-red-500 hover:border-red-100 hover:bg-red-50 transition-all font-bold text-xs uppercase tracking-widest active:scale-98"
+              >
+                Revogar Sessão
+              </button>
+            ) : (
+              <button 
+                onClick={handleConnect}
+                disabled={isLoading}
+                className="mt-8 md:mt-10 w-full py-4 rounded-xl bg-slate-900 text-white hover:bg-slate-800 transition-all font-bold text-xs uppercase tracking-widest active:scale-98 shadow-lg shadow-slate-900/20 disabled:opacity-50"
+              >
+                {isLoading ? 'Solicitando...' : 'Conectar ao X'}
+              </button>
+            )}
           </section>
 
           {/* Health & Usage Bento */}

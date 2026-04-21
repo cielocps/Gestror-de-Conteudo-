@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import Image from 'next/image';
-import { Sparkles, Trash2, Globe, Scan, Brain, Info, Plus } from 'lucide-react';
+import { Sparkles, Trash2, Globe, Scan, Brain, Info, Plus, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const initialRules = [
@@ -31,15 +31,16 @@ const initialRules = [
 ];
 
 const initialAccounts = [
-  { name: 'UX Collective', handle: '@uxdesigncc', status: 'Ativo', volume: '1.4k posts', avatar: 'https://picsum.photos/seed/ux/100/100' },
-  { name: 'Venture Capital', handle: '@vcfunding_io', status: 'Limitado', volume: '428 posts', avatar: 'https://picsum.photos/seed/vc/100/100' },
-  { name: 'TechCrunch', handle: '@TechCrunch', status: 'Ativo', volume: '8.2k posts', avatar: 'https://picsum.photos/seed/tc/100/100' },
-  { name: 'AI Daily', handle: '@aidailynews', status: 'Pausado', volume: '0 posts', avatar: 'https://picsum.photos/seed/ai/100/100' },
+  { name: 'UX Collective', handle: '@uxdesigncc', status: 'Ativo', volume: '1.4k posts', avatar: 'https://picsum.photos/seed/ux/100/100', interval: 15 },
+  { name: 'Venture Capital', handle: '@vcfunding_io', status: 'Limitado', volume: '428 posts', avatar: 'https://picsum.photos/seed/vc/100/100', interval: 60 },
+  { name: 'TechCrunch', handle: '@TechCrunch', status: 'Ativo', volume: '8.2k posts', avatar: 'https://picsum.photos/seed/tc/100/100', interval: 5 },
+  { name: 'AI Daily', handle: '@aidailynews', status: 'Pausado', volume: '0 posts', avatar: 'https://picsum.photos/seed/ai/100/100', interval: 30 },
 ];
 
 export default function CurationRulesPage() {
   const [accounts, setAccounts] = useState(initialAccounts);
   const [newHandle, setNewHandle] = useState('');
+  const [newInterval, setNewInterval] = useState(15);
 
   const handleAddAccount = () => {
     if (!newHandle.trim()) return;
@@ -49,7 +50,7 @@ export default function CurationRulesPage() {
     
     // Check if already exists
     if (accounts.find(a => a.handle.toLowerCase() === handle.toLowerCase())) {
-      alert('Esta conta já está sendo monitorada.');
+      console.warn('Esta conta já está sendo monitorada.');
       return;
     }
 
@@ -58,7 +59,8 @@ export default function CurationRulesPage() {
       handle: handle,
       status: 'Ativo',
       volume: '0 posts',
-      avatar: `https://picsum.photos/seed/${handle}/100/100`
+      avatar: `https://picsum.photos/seed/${handle}/100/100`,
+      interval: newInterval
     };
 
     setAccounts([newAccount, ...accounts]);
@@ -67,6 +69,10 @@ export default function CurationRulesPage() {
 
   const handleRemoveAccount = (handle: string) => {
     setAccounts(accounts.filter(a => a.handle !== handle));
+  };
+
+  const handleChangeInterval = (handle: string, interval: number) => {
+    setAccounts(accounts.map(a => a.handle === handle ? { ...a, interval } : a));
   };
 
   return (
@@ -152,16 +158,34 @@ export default function CurationRulesPage() {
 
             <form 
               onSubmit={(e) => { e.preventDefault(); handleAddAccount(); }}
-              className="bg-white p-2 rounded-xl flex items-center group transition-all focus-within:ring-2 focus-within:ring-indigo-100 border border-slate-200 shadow-sm"
+              className="bg-white p-2 rounded-xl flex items-center group transition-all focus-within:ring-2 focus-within:ring-indigo-100 border border-slate-200 shadow-sm gap-2"
             >
-              <span className="pl-4 md:pl-6 text-slate-300 font-black text-lg select-none opacity-40">@</span>
-              <input 
-                type="text" 
-                value={newHandle}
-                onChange={(e) => setNewHandle(e.target.value)}
-                className="bg-transparent border-none text-slate-800 focus:ring-0 w-full font-bold placeholder:text-slate-200 tracking-tight" 
-                placeholder="Pesquisar ou adicionar perfis..." 
-              />
+              <div className="flex-1 flex items-center">
+                <span className="pl-4 md:pl-6 text-slate-300 font-black text-lg select-none opacity-40">@</span>
+                <input 
+                  type="text" 
+                  value={newHandle}
+                  onChange={(e) => setNewHandle(e.target.value)}
+                  className="bg-transparent border-none text-slate-800 focus:ring-0 w-full font-bold placeholder:text-slate-200 tracking-tight" 
+                  placeholder="Pesquisar ou adicionar perfis..." 
+                />
+              </div>
+              
+              <div className="flex items-center gap-2 border-l border-slate-100 pl-4 py-1">
+                <Clock size={14} className="text-slate-400" />
+                <select 
+                  value={newInterval}
+                  onChange={(e) => setNewInterval(Number(e.target.value))}
+                  className="bg-transparent border-none text-slate-600 focus:ring-0 font-bold text-xs cursor-pointer outline-none"
+                >
+                  <option value={5}>5 min</option>
+                  <option value={15}>15 min</option>
+                  <option value={30}>30 min</option>
+                  <option value={60}>1 hora</option>
+                  <option value={360}>6 horas</option>
+                </select>
+              </div>
+
               <button 
                 type="submit"
                 className="bg-slate-900 text-white px-4 md:px-8 py-2.5 rounded-lg font-bold text-xs uppercase tracking-widest transition-transform active:scale-95 mr-1 hover:bg-slate-800 flex-shrink-0"
@@ -171,11 +195,12 @@ export default function CurationRulesPage() {
             </form>
 
             <div className="bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-sm overflow-x-auto custom-scrollbar">
-              <table className="w-full text-left min-w-[500px]">
+              <table className="w-full text-left min-w-[600px]">
                 <thead className="bg-slate-50">
                   <tr>
                     <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400">Conta</th>
                     <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400">Status</th>
+                    <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400 text-center">Intervalo</th>
                     <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400">Velocidade</th>
                     <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400 text-right">Config</th>
                   </tr>
@@ -220,6 +245,21 @@ export default function CurationRulesPage() {
                         </div>
                       </td>
                       <td className="px-8 py-6">
+                        <div className="flex justify-center">
+                          <select 
+                            value={account.interval}
+                            onChange={(e) => handleChangeInterval(account.handle, Number(e.target.value))}
+                            className="bg-slate-50 border border-slate-200 rounded-lg py-1 px-3 text-[10px] font-bold text-slate-600 focus:ring-1 focus:ring-indigo-100 transition-all outline-none"
+                          >
+                            <option value={5}>5m</option>
+                            <option value={15}>15m</option>
+                            <option value={30}>30m</option>
+                            <option value={60}>1h</option>
+                            <option value={360}>6h</option>
+                          </select>
+                        </div>
+                      </td>
+                      <td className="px-8 py-6">
                         <span className="text-xs font-mono font-bold text-slate-500">{account.volume}</span>
                       </td>
                       <td className="px-8 py-6 text-right">
@@ -234,7 +274,7 @@ export default function CurationRulesPage() {
                   ))}
                   {accounts.length === 0 && (
                     <tr>
-                      <td colSpan={4} className="px-8 py-10 text-center text-slate-400 text-sm italic">
+                      <td colSpan={5} className="px-8 py-10 text-center text-slate-400 text-sm italic">
                         Nenhuma conta sendo monitorada. Adicione uma acima.
                       </td>
                     </tr>
