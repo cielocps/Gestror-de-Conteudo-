@@ -114,8 +114,19 @@ export default function PostCard({
   }, [originalText, aiTranslation, handleTranslate, isTranslating, translationChecked]);
 
   const handlePublish = () => {
+    if (isTranslating) {
+      alert("Aguarde a conclusão da tradução antes de publicar.");
+      return;
+    }
+
+    if (!aiTranslation) {
+      alert("Tradução não disponível. Deseja publicar o texto original?");
+      // Or maybe just return: 
+      // return;
+    }
+
     const textToPublish = aiTranslation || originalText;
-    alert(`Publicando no X:\n\n${textToPublish}`);
+    alert(`Publicando no X (Tradução):\n\n${textToPublish}`);
   };
 
   return (
@@ -144,7 +155,7 @@ export default function PostCard({
                 <span className="text-slate-400 text-sm ml-1 truncate">{handle} · {time}</span>
               </div>
               
-              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Conteúdo Original</span>
                   <p className="text-slate-600 text-sm leading-relaxed">{originalText}</p>
@@ -171,7 +182,7 @@ export default function PostCard({
               </div>
               
               {image && (
-                <div className="mt-4 rounded-xl overflow-hidden border border-slate-200 aspect-video relative bg-slate-100 w-full">
+                <div className="mt-4 rounded-xl overflow-hidden border border-slate-200 aspect-video relative bg-slate-100">
                   <Image 
                     src={image} 
                     alt="Conteúdo do post" 
