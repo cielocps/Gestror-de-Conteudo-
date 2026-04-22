@@ -1,25 +1,35 @@
 import { NextResponse } from 'next/server';
+import { generateRandomString, generateCodeChallenge, OAUTH_COOKIE_CONFIG } from '@/lib/oauth';
 
-export async function GET() {
+export async function GET(request: Request) {
   const clientId = process.env.X_CLIENT_ID;
-  const redirectUri = `${process.env.APP_URL || 'http://localhost:3000'}/api/auth/x/callback`;
-  
+  const appUrl = process.env.APP_URL || new URL(request.url).origin;
+
   if (!clientId) {
-    return NextResponse.json({ error: 'X_CLIENT_ID is not configured' }, { status: 500 });
+    return NextResponse.json({ error: 'X_CLIENT_ID não configurado no menu Settings' }, { status: 500 });
   }
 
-  // X OAuth 2.0 Authorization URL construction
+  const state = generateRandomString(32);
+  const codeVerifier = generateRandomString(128);
+  const codeChallenge = await generateCodeChallenge(codeVerifier);
+
+  const redirectUri = `${appUrl}/api/auth/x/callback`;
+  
   const params = new URLSearchParams({
     response_type: 'code',
     client_id: clientId,
     redirect_uri: redirectUri,
-    scope: 'tweet.read tweet.write users.read offline.access',
-    state: 'state', // In a real app, generate a secure random state
-    code_challenge: 'challenge', // In a real app, use PKCE
-    code_challenge_method: 'plain' // Use S256 for better security
+    scope: 'tweet.read users.read offline.access',
+    state: state,
+    code_challenge: codeChallenge,
+    code_challenge_method: 'S256',
   });
 
-  const authUrl = `https://twitter.com/i/oauth2/authorize?${params.toString()}`;
+  const url = `https://twitter.com/i/oauth2/authorize?${params.toString()}`;
+  const response = NextResponse.json({ url });
+  
+  response.cookies.set('x_oauth_state', state, OAUTH_COOKIE_CONFIG);
+  response.cookies.set('x_oauth_code_verifier', codeVerifier, OAUTH_COOKIE_CONFIG);
 
-  return NextResponse.json({ url: authUrl });
+  return response;
 }

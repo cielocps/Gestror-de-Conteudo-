@@ -5,23 +5,10 @@
       "description": "Cached translations to avoid redundant Gemini API calls.",
       "type": "object",
       "properties": {
-        "originalText": {
-          "type": "string",
-          "description": "The original text that was translated."
-        },
-        "translatedText": {
-          "type": "string",
-          "description": "The result of the translation."
-        },
-        "targetLanguage": {
-          "type": "string",
-          "description": "The language code the text was translated into (e.g., 'pt-br')."
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Timestamp when the translation was cached."
-        }
+        "originalText": { "type": "string" },
+        "translatedText": { "type": "string" },
+        "targetLanguage": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["originalText", "translatedText", "targetLanguage", "createdAt"]
     }
@@ -29,7 +16,7 @@
   "firestore": {
     "/translations/{translationId}": {
       "schema": "Translation",
-      "description": "Collection of cached translations indexed by a hash of the original text and target language."
+      "description": "Collection of cached translations."
     }
   }
 }

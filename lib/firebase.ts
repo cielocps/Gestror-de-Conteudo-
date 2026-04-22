@@ -10,7 +10,6 @@ export const auth = getAuth(app);
 // Validate connection to Firestore
 async function testConnection() {
   try {
-    // Attempting to read a non-existent doc to trigger a server-side check
     await getDocFromServer(doc(db, 'system', 'connection_test'));
     console.log("Firestore connection verified");
   } catch (error) {
@@ -20,7 +19,6 @@ async function testConnection() {
   }
 }
 
-// Only run in browser
 if (typeof window !== 'undefined') {
   testConnection();
 }

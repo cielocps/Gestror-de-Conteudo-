@@ -3,7 +3,7 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import Image from 'next/image';
-import { CheckCircle2, Repeat, Send, Verified, Globe, Loader2 } from 'lucide-react';
+import { Repeat, Send, Verified, Globe, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { GoogleGenAI } from "@google/genai";
 import { db } from "@/lib/firebase";
@@ -32,8 +32,8 @@ export default function PostCard({
 }: PostCardProps) {
   const [aiTranslation, setAiTranslation] = React.useState(initialTranslation || '');
   const [isTranslating, setIsTranslating] = React.useState(false);
+  const [translationChecked, setTranslationChecked] = React.useState(false);
 
-  // Helper to generate a unique key for the translation cache
   const getCacheId = async (text: string, targetLang: string) => {
     const data = `${text.trim().toLowerCase()}_${targetLang}`;
     const msgUint8 = new TextEncoder().encode(data);
@@ -43,25 +43,23 @@ export default function PostCard({
   };
 
   const handleTranslate = React.useCallback(async () => {
-    if (!process.env.NEXT_PUBLIC_GEMINI_API_KEY) {
-      console.warn("NEXT_PUBLIC_GEMINI_API_KEY não configurada");
-      return;
-    }
+    if (!process.env.NEXT_PUBLIC_GEMINI_API_KEY) return;
 
-    // Get language config from localStorage
     let config = { enToPt: true, esToPt: true, autoDetect: true };
     try {
       const saved = localStorage.getItem('language_config');
       if (saved) config = JSON.parse(saved);
     } catch (e) { /* use default */ }
 
-    // Logic: if not auto-detect and both disabled, don't translate
-    if (!config.autoDetect && !config.enToPt && !config.esToPt) return;
+    if (!config.autoDetect && !config.enToPt && !config.esToPt) {
+      setTranslationChecked(true);
+      return;
+    }
 
     try {
       setIsTranslating(true);
+      setTranslationChecked(true);
 
-      // 1. Check Cache first
       const cacheId = await getCacheId(originalText, 'pt-br');
       try {
         const cacheDoc = await getDoc(doc(db, 'translations', cacheId));
@@ -77,12 +75,8 @@ export default function PostCard({
         console.warn("Falha ao ler cache:", cacheError);
       }
 
-      // 2. If not in cache, call Gemini
       const ai = new GoogleGenAI({ apiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY as string });
-      
-      const prompt = config.autoDetect 
-        ? `Traduza o seguinte tweet para Português Brasileiro (PT-BR), mantendo o tom original e preservando hashtags se houver: "${originalText}"`
-        : `Considere que o tweet pode estar em Inglês ou Espanhol. Traduza para PT-BR apenas se o idioma de origem for um destes e estiver selecionado (EN: ${config.enToPt}, ES: ${config.esToPt}). Caso contrário, ou se já estiver em PT-BR, retorne o texto original: "${originalText}"`;
+      const prompt = `Traduza o seguinte tweet para Português Brasileiro (PT-BR), mantendo o tom original e preservando hashtags se houver: "${originalText}"`;
 
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
@@ -92,8 +86,6 @@ export default function PostCard({
       const textValue = response?.text;
       if (textValue && textValue !== originalText) {
         setAiTranslation(textValue as string);
-
-        // 3. Save to cache
         try {
           await setDoc(doc(db, 'translations', cacheId), {
             originalText,
@@ -113,13 +105,13 @@ export default function PostCard({
   }, [originalText]);
 
   React.useEffect(() => {
-    if (!aiTranslation && !isTranslating) {
+    if (!aiTranslation && !isTranslating && !translationChecked) {
       const timer = setTimeout(() => {
         handleTranslate();
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [originalText, aiTranslation, handleTranslate, isTranslating]);
+  }, [originalText, aiTranslation, handleTranslate, isTranslating, translationChecked]);
 
   const handlePublish = () => {
     const textToPublish = aiTranslation || originalText;
@@ -152,7 +144,7 @@ export default function PostCard({
                 <span className="text-slate-400 text-sm ml-1 truncate">{handle} · {time}</span>
               </div>
               
-              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Conteúdo Original</span>
                   <p className="text-slate-600 text-sm leading-relaxed">{originalText}</p>
@@ -179,8 +171,7 @@ export default function PostCard({
               </div>
               
               {image && (
-                <div className="mt-4 rounded-xl overflow-hidden border border-slate-200 aspect-video relative bg-slate-100">
-                  <div className="absolute top-3 left-3 z-10 px-2 py-1 bg-white/80 backdrop-blur rounded text-[10px] font-bold uppercase text-slate-600">Mídia Anexada</div>
+                <div className="mt-4 rounded-xl overflow-hidden border border-slate-200 aspect-video relative bg-slate-100 w-full">
                   <Image 
                     src={image} 
                     alt="Conteúdo do post" 
@@ -195,15 +186,12 @@ export default function PostCard({
           
           <div className="mt-6 flex gap-3 justify-end">
             <motion.button 
-              whileHover={{ y: -1 }}
               whileTap={{ scale: 0.98 }}
               className="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-lg hover:bg-slate-200 transition-colors border border-slate-200 flex items-center gap-2"
             >
-              <Send size={14} />
-              Revisar
+              <Send size={14} /> Revisar
             </motion.button>
             <motion.button 
-              whileHover={{ y: -1 }}
               whileTap={{ scale: 0.98 }}
               onClick={handlePublish}
               disabled={isTranslating}
@@ -212,8 +200,7 @@ export default function PostCard({
                 isTranslating ? "opacity-50 cursor-not-allowed" : "hover:bg-slate-800"
               )}
             >
-              <Repeat size={14} />
-              Publicar Tradução
+              <Repeat size={14} /> Publicar
             </motion.button>
           </div>
         </div>

@@ -1,6 +1,4 @@
 {
   "name": "Archive - Gestor de Conteúdo X",
-  "description": "Um painel de alta fidelidade para monitorar, curar e traduzir conteúdo do X (Twitter) com insights de IA localizados.",
-  "requestFramePermissions": [],
-  "majorCapabilities": []
+  "description": "Gerencie e faça a curadoria do seu conteúdo do X com alta precisão e insights baseados em IA."
 }
