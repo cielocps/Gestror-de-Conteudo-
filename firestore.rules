@@ -1,0 +1,46 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    // Translation Schema Validation
+    function isValidTranslation(data) {
+      return data.keys().hasAll(['originalText', 'translatedText', 'targetLanguage', 'createdAt']) 
+             && data.keys().size() == 4
+             && data.originalText is string && data.originalText.size() <= 1000
+             && data.translatedText is string && data.translatedText.size() <= 2000
+             && data.targetLanguage is string && data.targetLanguage.size() <= 10
+             && data.createdAt == request.time;
+    }
+
+    match /translations/{translationId} {
+      // Allow public read for caching benefits
+      allow get: if isValidId(translationId);
+      allow list: if false; // No list to prevent scraping
+
+      // Allow create if data is valid
+      // Note: Ideally would use isSignedIn() here, but for now we allow public write 
+      // with strict schema to enable the cache without a forced login flow.
+      allow create: if isValidId(translationId) && isValidTranslation(incoming());
+      
+      // No updates or deletes allowed for the cache
+      allow update, delete: if false;
+    }
+  }
+}

@@ -6,6 +6,8 @@ import Image from 'next/image';
 import { CheckCircle2, Repeat, Send, Verified, Globe, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { GoogleGenAI } from "@google/genai";
+import { db } from "@/lib/firebase";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 
 interface PostCardProps {
   author: string;
@@ -31,6 +33,15 @@ export default function PostCard({
   const [aiTranslation, setAiTranslation] = React.useState(initialTranslation || '');
   const [isTranslating, setIsTranslating] = React.useState(false);
 
+  // Helper to generate a unique key for the translation cache
+  const getCacheId = async (text: string, targetLang: string) => {
+    const data = `${text.trim().toLowerCase()}_${targetLang}`;
+    const msgUint8 = new TextEncoder().encode(data);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  };
+
   const handleTranslate = React.useCallback(async () => {
     if (!process.env.NEXT_PUBLIC_GEMINI_API_KEY) {
       console.warn("NEXT_PUBLIC_GEMINI_API_KEY não configurada");
@@ -49,6 +60,24 @@ export default function PostCard({
 
     try {
       setIsTranslating(true);
+
+      // 1. Check Cache first
+      const cacheId = await getCacheId(originalText, 'pt-br');
+      try {
+        const cacheDoc = await getDoc(doc(db, 'translations', cacheId));
+        if (cacheDoc.exists()) {
+          const data = cacheDoc.data();
+          if (data.translatedText) {
+            setAiTranslation(data.translatedText);
+            setIsTranslating(false);
+            return;
+          }
+        }
+      } catch (cacheError) {
+        console.warn("Falha ao ler cache:", cacheError);
+      }
+
+      // 2. If not in cache, call Gemini
       const ai = new GoogleGenAI({ apiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY as string });
       
       const prompt = config.autoDetect 
@@ -63,6 +92,18 @@ export default function PostCard({
       const textValue = response?.text;
       if (textValue && textValue !== originalText) {
         setAiTranslation(textValue as string);
+
+        // 3. Save to cache
+        try {
+          await setDoc(doc(db, 'translations', cacheId), {
+            originalText,
+            translatedText: textValue,
+            targetLanguage: 'pt-br',
+            createdAt: serverTimestamp()
+          });
+        } catch (saveError) {
+          console.warn("Falha ao salvar cache:", saveError);
+        }
       }
     } catch (error) {
       console.error("Erro na tradução IA:", error);
